@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/MateusOliveira30/CRUD-In-Memory/api"
 )
 
 func main() {
