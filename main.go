@@ -18,7 +18,7 @@ func main() {
 }
 
 func run() error {
-	db := make(map[string]string)
+	db := make(map[string]api.User)
 	handler := api.NewHandler(db)
 
 	s := http.Server{

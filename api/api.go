@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func NewHandler(db map[string]string) http.Handler {
+func NewHandler(db map[string]User) http.Handler {
 
 	r := chi.NewMux()
 
@@ -20,7 +20,7 @@ func NewHandler(db map[string]string) http.Handler {
 	r.Get("/api/users", HandleGetUsers(db))
 	r.Get("/api/users/:id", HandleGetUsersWithID(db))
 	r.Delete("/api/users/:id")
-	r.Post("/api/users")
+	r.Post("/api/users", HandlePost(db))
 	r.Put("/api/users/:id")
 
 	return r
@@ -28,17 +28,17 @@ func NewHandler(db map[string]string) http.Handler {
 
 type id uuid.UUID
 
-type user struct {
+type User struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
-	biography string
+	Biography string `json:"biography"`
 }
 
 type application struct {
-	data map[id]user
+	data map[id]User
 }
 
-func HandleGetUsers(db map[string]string) http.HandlerFunc {
+func HandleGetUsers(db map[string]User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		users, err := json.Marshal(db)
@@ -50,7 +50,7 @@ func HandleGetUsers(db map[string]string) http.HandlerFunc {
 	}
 }
 
-func HandleGetUsersWithID(db map[string]string) http.HandlerFunc {
+func HandleGetUsersWithID(db map[string]User) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		user, ok := db[id]
@@ -59,6 +59,21 @@ func HandleGetUsersWithID(db map[string]string) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(user))
+		json.NewEncoder(w).Encode(user)
+	}
+}
+
+func HandlePost(db map[string]User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body User
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "invalid input", http.StatusBadRequest)
+			return
+		}
+		id := uuid.NewString()
+		db[id] = body
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(map[string]string{"id": id})
 	}
 }
