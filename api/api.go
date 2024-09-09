@@ -19,7 +19,7 @@ func NewHandler(db map[string]User) http.Handler {
 
 	r.Get("/api/users", HandleGetUsers(db))
 	r.Get("/api/users/:id", HandleGetUsersWithID(db))
-	r.Delete("/api/users/:id")
+	r.Delete("/api/users/:id", HandleDelete(db))
 	r.Post("/api/users", HandlePost(db))
 	r.Put("/api/users/:id")
 
@@ -75,5 +75,18 @@ func HandlePost(db map[string]User) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(map[string]string{"id": id})
+	}
+}
+
+func HandleDelete(db map[string]User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		_, ok := db[id]
+		if !ok {
+			http.Error(w, "user not found", http.StatusNotFound)
+			return
+		}
+		delete(db, id)
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
