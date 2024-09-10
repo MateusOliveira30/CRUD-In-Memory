@@ -18,24 +18,19 @@ func NewHandler(db map[string]User) http.Handler {
 	r.Use(middleware.Logger)
 
 	r.Get("/api/users", HandleGetUsers(db))
-	r.Get("/api/users/:id", HandleGetUsersWithID(db))
-	r.Delete("/api/users/:id", HandleDelete(db))
+	r.Get("/api/users/{id}", HandleGetUsersWithID(db))
+	r.Delete("/api/users/{id}", HandleDelete(db))
 	r.Post("/api/users", HandlePost(db))
-	r.Put("/api/users/:id")
+	r.Put("/api/users/{id}", HandleUpdate(db))
 
 	return r
 }
-
-type id uuid.UUID
 
 type User struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Biography string `json:"biography"`
-}
-
-type application struct {
-	data map[id]User
+	ID        string `json:"id"`
 }
 
 func HandleGetUsers(db map[string]User) http.HandlerFunc {
@@ -71,6 +66,7 @@ func HandlePost(db map[string]User) http.HandlerFunc {
 			return
 		}
 		id := uuid.NewString()
+		body.ID = id
 		db[id] = body
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -87,6 +83,24 @@ func HandleDelete(db map[string]User) http.HandlerFunc {
 			return
 		}
 		delete(db, id)
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func HandleUpdate(db map[string]User) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		_, ok := db[id]
+		if !ok {
+			http.Error(w, "user not found", http.StatusNotFound)
+			return
+		}
+		var u User
+		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+			http.Error(w, "invalid input", http.StatusBadRequest)
+		}
+		u.ID = id
+		db[id] = u
 		w.WriteHeader(http.StatusNoContent)
 	}
 }
